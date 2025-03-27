@@ -1,0 +1,194 @@
+---
+title: "QTM 6300: Assignment 3"
+author: "Chela Reyes"
+date: "September 16, 2024"
+format: html
+editor: source
+self-contained: true
+toc: true
+toc-expand: true
+toc-depth: 3
+---
+
+```{r setup, include=FALSE}
+rm(list = ls()) # clears global environment
+knitr::opts_knit$set(root.dir = "/Users/diana/Babson MSBA/Machine learning") # Set your working directory 
+```
+
+# Context
+
+Babo Theatres offer semi-annual movie passes to customers who can watch unlimited movies in their theatres. They want you, the company’s data analyst, to evaluate this program to look for sales patterns. In particular, the theatre is interested in creating a model that predicts average sales each time the movie pass customer comes to watch a movie. The average sales variable (avg_spent) include spending for food and drinks. For this homework, you will need movie_sales.csv along with the data dictionary provided to you. Note that the data set contains information for 560 movie pass customers.
+
+For this assignment, please work in the R Markdown file provided. Submit the .Rmd file along with the resulting .HTML file. 
+
+# Questions
+
+## Question 1
+
+Import the data set movie_sales.csv into R. Name this data frame as "movies." 
+
+```{r}
+movies <- read.csv("movie_sales.csv")
+#View(movies)
+str(movies)
+```
+
+## Question 2
+
+Set the seed to 28 and separate the file randomly into 55% training and 45% test sets. You should end up with a training data frame called "training" and a testing data set called "test".
+
+```{r}
+movies$gender <- as.factor(movies$gender)
+movies$spent_drinks <- as.factor(movies$spent_drinks)
+movies$fav_category <- as.factor(movies$fav_category)
+set.seed(28) # R Version 2024.04.2+764 (2024.04.2+764)
+N <- nrow(movies)
+trainingSize <- round (N*0.55)
+trainingCases <- sample(N, trainingSize)
+
+training  <- movies[trainingCases,]
+test <- movies[-trainingCases,]
+```
+
+
+
+## Question 3
+
+How many observations/cases does the training set contain? How many observations/cases does the test set contain?
+
+Answer: The training set contains 308 observations/cases and the test contain 252 observations/cases 
+
+
+## Question 4
+
+Using R, build a linear regression model with the lm() function where the dependent variable ("label" or "target") is the average amount spent (avg_spent) and the independent variables ("features") are number of movies watched (movies_watched), the dummy for ever having bought alcohol (ever_bought_alcohol), percent of total amount bought as drinks (perc_drinks), average movie rating of movies watched (movie_avg_rating), along with the drama, comedy and action dummy variables.
+
+```{r}
+model1 <- lm(avg_spent ~ movies_watched + ever_bought_alcohol + perc_drinks + movie_avg_rating + drama + comedy + action, data=training)
+ summary(model1)         
+```
+
+## Question 5
+In your linear regression model, properly interpret the y-intercept.
+
+Answer: My Y intercept is average money spent and is 18.9 us dolars when all other values are zero, this means that if a person goes to the movies but has not watched any movies, not bought alcohol, never drinks, rates movies 0 and has not watched drama comedy or action they are expected to spend 18.9dolars. But in real life this situation is not possible.
+
+## Question 6
+In your linear regression model, properly interpret the coefficient for movies watched.
+
+
+Answer: Assuming everything else stays the same, the coefficieent for movies watched is 0.75, and this means that for each aditional movie a persons watches, their average spending is expected to increase by 0.75 units in this case dolars
+
+## Question 7
+
+In your linear regression model, properly interpret the coefficient for ever_bought_alcohol. 
+
+Answer: the coefficient for ever bought alcohol is 2.6 and this means that if a person has ever bought any alcohol in the movies their average spending is expected to be 2.6 dolars higher compared to someone that has never bough alcohol there, assuming everything else stays the same 
+ 
+ 
+## Question 8
+
+In your linear regression model, which variable(s) have significant linear relationships with the dependent variable, avg_spent?
+
+Answer: the variables that have significant linear relationships with the dependent variable are movies_watched, ever_bought_alcohol and movie_avg_rating, the more the stars the more significant they are. 
+
+## Question 9
+
+Use the step() function to use a stepwise function to automatically select the "best" model. You can use your first lm() model from as the starting point.
+
+
+```{r}
+model2 <- step(model1)
+summary(model2)
+```
+
+## Question 10
+
+In your stepwise model, what variables ended up staying the final model?
+
+Answer: movies_watched, ever_bought_alcohol, movie_avg_rating, drama
+
+## Question 11
+
+In the resulting model from the stepwise model, how much, on average, does a customer spend per trip to the movie theatre if they have watched 10 movies, never bought alcohol, watched movies with an average rating of 87, and whose favorite category is comedy. You can either calculate the prediction using a calculator (and show work) or you can use R as a calculator.
+
+```{r}
+18.940371 + 0.076994*10 + 2.659241*0 + -0.135650*87 + -0.561952*0 
+```
+
+
+## Question 12
+
+Using the test set, store the predictions from your second model in the "movies" data frame. Here, you want to do two things:
+
+* Store the predictions in a stand-alone object called "predictions"
+
+* Store the predictions in the test data frame.
+
+```{r}
+predictions <- predict(model2, test)
+test$predictions <- predict(model2, test)
+```
+
+
+## Question 13
+
+Calculate the MAPE using R code.
+
+```{r}
+observations <- test$avg_spent
+mape <- mean(abs(observations-predictions)/observations)
+mape
+```
+
+
+## Question 14
+
+In one sentence, interpret the MAPE.
+
+Answer: The mape is 17%, that is the deviation between the real 
+
+
+
+## Question 15
+
+Calculate the RMSE using R code.
+
+```{r}
+rmse <- sqrt(mean((observations-predictions)^2))
+rmse
+```
+
+
+## Question 16
+
+In one sentence, interpret the RMSE.
+
+Answer: Average amount spent with the model we just did is deviated from the average amount spent by 2.24 us dolars
+
+
+
+## Question 17
+
+With R code, calculate the naive benchmark using the mean as the prediction.
+
+Answer: 30%
+
+
+```{r}
+errors_bench <- observations - mean(training$avg_spent)
+mape_bench <- mean(abs(errors_bench)/observations)
+mape_bench
+rmse_bench <- sqrt(mean(errors_bench^2))
+rmse_bench
+```
+
+## Question 18
+
+Is your model better than using the mean as the prediction? How do you know?
+
+Answer: Our model is better than using the mean as the prediction. I know that because the mape of our model is only 17% and the bench mape is deviating 29%, and the RMSE of our model is 2.24 and the bench RMSE is 3.62, we would be 2.24 dolars off and the bench mark is about 3.62 off the average. My model has less deviation, which means it is more accurate. 
+
+
+
+

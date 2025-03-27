@@ -1,0 +1,193 @@
+---
+title: "Assignment 8: Ensemble Methods"
+author: "Chela Reyes"
+date: "10/08/2024"
+output:
+  rmdformats::readthedown:
+    number_sections: true
+    highlight: tango
+    df_print: paged
+    center: true
+---
+
+```{r setup, include=FALSE}
+rm(list = ls()) # clears global environment
+knitr::opts_knit$set(root.dir = '/Users/diana/Babson MSBA/Machine learning')
+```
+
+
+# Context
+
+Let’s take a look at the data located in UniversalBank.csv. Each row represents a customer at small but rapidly growing bank. The columns measure all sorts of customer characteristics, ranging from their demographic information (e.g., Age, Family) to whether they currently have various accounts open with the bank (e.g., Securities Account, CD Account). For a complete description of the fields, consult the data page on Canvas.
+
+The bank is aggressively trying to convert customers from depositors into borrowers through its personal loan program. The column **Personal Loan** shows whether each customer responded to a direct marketing campaign related to this program. The marketing team is now trying to understand what types of customers responds to new personal loans marketing. If they can establish reasonably strong predictive power, they will deploy the model more widely across their customer base to identify promising leads and a more nuanced target market.
+
+
+## Question 1
+
+Do the following:
+
+* Import the data as "bank"
+
+* Remove any predictor that might be inappropriate for this activity.
+
+* Set the target to logical.
+
+```{r}
+bank = read.csv("UniversalBank.csv")
+bank$Personal.Loan = as.integer(bank$Personal.Loan)
+bank$ZIP.Code = NULL
+bank$ID = NULL
+```
+
+
+## Question 2
+
+* Set a seed of 109 and partition a training set with 72% of the data.
+
+* Run a Classification Tree to predict Personal.Loan, make the predictions, and calculate the error rate. What is the error rate?
+
+Answer: 1.64%
+
+```{r}
+set.seed(109)
+N = nrow(bank)
+trainingSize  = round(N*0.72)
+trainingCases = sample(N, trainingSize)
+training  = bank[trainingCases,]
+test      = bank[-trainingCases,]
+
+library(rpart)
+model = rpart(Personal.Loan ~ ., data=training)
+pred = predict(model, test)
+pred = (pred > 0.5)
+library(rpart.plot)
+rpart.plot(model)
+error_tree = sum(pred!=test$Personal.Loan)/nrow(test)
+```
+
+
+## Question 3
+
+Bagging: Run a random forest model where you set the number of trees to 1000. Make the predictions and calculate the error rate. What is the error rate? Does this improve on the original single Classification Tree model?
+
+Answer: The error rate from random forest is 1.28% which shows that there was a reduction from 1.64% to 1.28% suggests that using the Random forest model improved classification accuracy, as it reduced the error rate
+
+```{r}
+library(randomForest)
+
+set.seed(109)
+
+rf = randomForest(Personal.Loan ~ ., data= training, ntree=1000)
+pred_rf = predict(rf, test)
+pred_rf = (pred_rf > 0.5)
+
+error_randomforest = sum(pred_rf!=test$Personal.Loan)/nrow(test)
+```
+
+
+
+## Question 4
+
+* Boosting: Set a new seed to 23 and run a boosted tree model with 500 trees and 5 folds. Determine the best tree size. What is this size? Then use this "best tree size" to run another boosted tree model.
+
+* Make the predictions and calculate the error rate. What is the error rate? If this error rate is wose than one or more of your previous models, what do you think might have happened?
+
+Answer: The error boost is 2.07%, which is higher than the previous random forest model’s error rate of 1.28%. This means that the boosted model did not generalized the data well enough 
+
+
+```{r}
+library(gbm)
+
+set.seed(23) 
+boost = gbm(Personal.Loan ~ ., data=training,n.trees=500, cv.folds=5)
+
+best_size <- gbm.perf(boost,method="cv")
+gbm.perf(boost)
+
+boost = gbm(Personal.Loan ~ ., data=training,n.trees=500, cv.folds=5)
+
+pred_boost  = predict(boost, test, n.trees=best_size, type="response")
+pred_boost = (pred_boost > 0.5)
+
+error_boost = sum(pred_boost != test$Personal.Loan)/nrow(test)
+```
+
+
+## Question 5
+
+* Now, run a logistic regression model to predict Personal.Loan. Refine the model using the step() function.
+* Make the predictions. Use a cutoff of 0.5. 
+* Calculate the error rate. What is the error rate?
+
+Answer: The error rate is 4.35%
+
+
+```{r}
+bank$Personal.Loan = as.logical(bank$Personal.Loan)
+
+model1 <- glm(Personal.Loan ~ ., data=training, family=binomial)
+summary(model1)
+
+model2 <- step(model1)
+summary(model2)
+
+test$predictions <- predict(model2, test, type="response")
+predictions <- test$predictions
+
+test$predictionsTF <- (test$predictions >= 0.5)
+predictionsTF <- test$predictionsTF
+
+observations <-test$Personal.Loan
+
+table(predictionsTF, test$Personal.Loan)
+
+error_rate <- sum(predictionsTF != observations)/nrow(test)
+error_rate
+
+
+```
+
+
+# Question 6
+
+* Now, try to do stacking by combining the  Random Forest model, the Boosted model, and the logistic regression model. What is your error rate?
+
+Answer: 
+
+```{r}
+pred_rf_full = predict(rf, bank)
+pred_rf_full = (pred_rf_full > 0.5)
+
+pred_boost_full = predict(boost, bank, n.trees=best_size, type="response")
+pred_boost_full = (pred_boost_full > 0.5)
+
+pred_model2_full = predict(model2, bank, type = "response")
+pred_model2_full =  (pred_model2_full > 0.5)
+
+bank_stacked = cbind(bank,pred_boost_full, pred_rf_full, pred_model2_full)
+
+bank_stacked$Personal.Loan = as.logical(bank$Personal.Loan)
+
+train_stacked = bank_stacked[trainingCases, ]
+test_stacked = bank_stacked[-trainingCases, ]
+
+stacked = glm(Personal.Loan ~ ., data = train_stacked, family=binomial)
+
+# Make the predictions
+pred_stacked = predict(stacked, test_stacked, type="response")
+pred_stacked = (pred_stacked > 0.5)
+
+# Calculate error rate
+error_stacked = sum(pred_stacked != test$Personal.Loan)/nrow(test)
+```
+
+
+
+## Question 7
+
+Which ensemble method lowered the error the most? 
+
+Answer: 
+The ensemble method that lowered the error the most is Random Forest and Stacked Model, both with an error rate of approximately 0.0129.
+

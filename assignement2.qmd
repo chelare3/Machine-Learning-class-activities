@@ -1,0 +1,142 @@
+---
+title: "QTM 6300 [Babson College]: Assignment 2"
+author: "Eric W. Chan"
+date: "2024"
+format: html
+theme: lumen
+self-contained: true
+editor: source
+toc: true
+toc-depth: 2
+---
+
+We will be using the BostonHousing.csv data. Please familiarize yourself with the data set first using the data dictionary prior to doing the below. Make sure to follow these directions:
+
+* Please submit a single R script.
+* Also, specific to this assignment, feel free to ask each other for help as I would like you to successfully write an R script, but please submit your own script.
+you will receive credit for this assignment as long as it is good effort.
+* Generally, it is good practice to comment using "#" exactly what you are doing, but especially what number you are answering. 
+* This is due before next class. Late Assignments (without prior approval) will only be accepted at most 24 hours after the due date/time. Unexcused late assignments will incur an automatic 25% loss of points.
+
+# Questions
+
+
+
+1. At the top of your file, clear your global environment (the memory of your data frames and other objects) by using the function rm(list=ls()).
+
+```{r}
+rm(list=ls())
+```
+
+2. Set your working directory in the gray space provided. 
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = "/Users/diana/Babson MSBA/Machine learning")
+```
+
+3. Import the BostonHousing.csv data set. Name this data frame as "housing." Write the proper code.
+
+```{r}
+housing <- read.csv("BostonHousing.csv")
+```
+
+4. View the data using the View() and head() functions. Write the proper code.
+
+```{r}
+#View(housing)
+head(housing) 
+```
+
+5. What is the data type of _AGE_? Use a function in R and answer the question  in space provided.
+
+Answer: numeric
+
+```{r}
+str(housing$AGE)
+```
+
+6. What is the data type of _CHAS_? Use a function in R and answer the question in space provided.
+
+Answer: integer 
+
+```{r}
+str(housing$CHAS)
+```
+
+
+7. Are there any variables with the data type "CHAR"? Use a function in R and answer the question.
+
+Answer: No 
+
+```{r}
+is.character(housing)
+```
+
+
+8. Are there any variables that looks like it might be appropriate to be converted to a factor variable? Which ones and why?
+
+Answer: Yes, 3 variables can be converted to a factor variable: CHAS, ISHIGHVAL and RAD is tricky because it is measuring from a scale of 1 (being the nearest) to 25 being the farest and only takes distance into consideration. For example, you could be near a highway, but the way to access it requires entering a private lot, so you have to go longer to enter.
+
+```{r}
+
+```
+
+9. What is the data point located in row 233, column 6?
+
+Answer: 8.337 average number of rooms per dwelling in house 233
+
+```{r}
+housing[233,6]
+```
+
+
+10. What is the data point located in row 378, column 4?
+
+Answer: Is not near charles river, the data point is 0 
+
+```{r}
+housing [378,4]
+```
+
+11. Use the proper R function to view only rows 202 through 204.
+
+
+Answer: 
+
+```{r}
+housing[202:204, ]
+```
+
+12. Keep only data for the columns _CRIM_, _CHAS_, _AGE_, and _MEDV_. Create a new data frame for this set of columns called "housing_subset."
+
+Answer: 
+
+```{r}
+housing_subset <- housing[,c("CRIM","CHAS", "AGE" , "MEDV")]
+#View(housing_subset)
+```
+
+13. Using housing_subset, Plot the relationship between the _CRIM_ and _MEDV_ variables.
+
+Answer:
+
+```{r}
+library(ggplot2)
+ggplot(data = housing_subset, aes(x=CRIM, y=MEDV))+geom_line()
+```
+
+14. Using housing_subset, typecast _CHAS_ as a factor variable.
+
+Answer: 
+
+```{r}
+housing_subset$CHAS = as.factor(housing_subset$CHAS)
+```
+
+15. Using housing_subset, how many locations are are within census tract bounds of the river (see the _CHAS_ variable). Use the table() function to see this.
+
+Answer: 35 locations are within census tract bounds of the river
+
+```{r}
+table(housing_subset$CHAS) 
+```
